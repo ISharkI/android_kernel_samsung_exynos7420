@@ -68,6 +68,8 @@ static void do_dbs_timer(struct work_struct *work);
 static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				unsigned int event);
 
+u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy);
+
 #ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_PEGASUSQ
 static
 #endif

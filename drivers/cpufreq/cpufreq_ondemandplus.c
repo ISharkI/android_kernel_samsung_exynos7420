@@ -83,6 +83,8 @@ static struct task_struct *speedchange_task;
 static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 
+u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy);
+
 /*
  * Tunables start
  */

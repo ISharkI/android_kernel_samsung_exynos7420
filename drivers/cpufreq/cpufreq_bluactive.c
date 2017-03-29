@@ -58,6 +58,7 @@ int governor_enabled;
 int prev_load;
 };
 static DEFINE_PER_CPU(struct cpufreq_interactive_cpuinfo, cpuinfo);
+u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy);
 /* realtime thread handles frequency scaling */
 static struct task_struct *speedchange_task;
 static cpumask_t speedchange_cpumask;
@@ -226,12 +227,12 @@ return min + load * (max - min) / 100;
 static u64 update_load(int cpu)
 {
 struct cpufreq_interactive_cpuinfo *pcpu = &per_cpu(cpuinfo, cpu);
-u64 now;
-u64 now_idle;
+u64 now = 0;
+u64 now_idle = 0;
 unsigned int delta_idle;
 unsigned int delta_time;
 u64 active_time;
-//now_idle = get_cpu_idle_time(cpu, &now, 0);
+now_idle = get_cpu_idle_time(cpu, &now, 0);
 delta_idle = (unsigned int)(now_idle - pcpu->time_in_idle);
 delta_time = (unsigned int)(now - pcpu->time_in_idle_timestamp);
 if (delta_time <= delta_idle)
