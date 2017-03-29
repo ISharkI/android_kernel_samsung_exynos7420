@@ -169,6 +169,14 @@ sd_store_cache_type(struct device *dev, struct device_attribute *attr,
 			break;
 		}
 	}
+	
+	/*
+	 * We want to enforce the cache_type "none" to enable the devices
+	 * deep-sleep ability again. Disable both write-cache and read-cache
+	 * to accomplish that.
+	 */
+	ct = 1;
+	
 	if (ct < 0)
 		return -EINVAL;
 	rcd = ct & 0x01 ? 1 : 0;
@@ -2502,7 +2510,11 @@ defaults:
 		sd_printk(KERN_ERR, sdkp, "Assuming drive cache: write through\n");
 		sdkp->WCE = 0;
 	}
-	sdkp->RCD = 0;
+	
+	sd_printk(KERN_NOTICE, sdkp, "Forcing drive cache: none (WCE: 0; RCD: 1)\n");
+	sdkp->WCE = 0;		
+	sdkp->RCD = 1;
+	
 	sdkp->DPOFUA = 0;
 }
 
