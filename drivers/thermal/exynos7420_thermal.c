@@ -973,7 +973,30 @@ static int exynos_tmu_read(struct exynos_tmu_data *data)
 
 	if (max != INT_MIN)
 		last_temperature = max;
-
+	
+#if defined(CONFIG_CPU_THERMAL_CRITICAL_SHUTDOWN)
+	if (max >= 80000) { // 80.0 °C
+#if defined(CONFIG_CPU_THERMAL_CRITICAL_EMERGENCY_SHUTDOWN)
+		/*
+		 * This will perform an emergency-shutdown which
+		 * disables IRQs and instructs all CPU-cores except
+		 * cpu0 to stop. Then the kernel shuts down the machine.
+		 * No clean-ups and filesystem-syncs will be done
+		 * prior to the shutdown-sequence.
+		 */
+		machine_power_off();
+#else
+		/*
+		 * This will perform an clean shutdown which cleans
+		 * up everything and synchronises all filesystems.
+		 * Then it will continue with machine_power_off()
+		 * (Mentioned above)
+		 */
+		kernel_power_off();
+#endif
+	}
+#endif
+	
 	return max;
 }
 

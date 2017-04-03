@@ -222,6 +222,20 @@ config CPU_THERMAL_IPA_CONTROL
 	help
 	  This implements the intelligent power arbiter (IPA) control algorithms.
 	  If you want this support, you should say Y here.
+	  
+config CPU_THERMAL_CRITICAL_SHUTDOWN
+	bool "Enable shutdown on critical temperature"
+	depends on CONFIG_EXYNOS_THERMAL
+	help
+	  This activates the function which executes an shutdown
+	  if the current temperature of the SoC reached a critical value
+	  
+config CPU_THERMAL_CRITICAL_EMERGENCY_SHUTDOWN
+	bool "Enable emergency-shutdown on critical temperature"
+	depends on CONFIG_EXYNOS_THERMAL
+	help
+	  in addition to CPU_THERMAL_CRITICAL_SHUTDOWN, this will shutdown the machine
+	  without prior cleanups, file-system syncs, etc. which can by very dangerous
 
 config CPU_THERMAL_IPA_DEBUG
 	bool "Enable debugging"
