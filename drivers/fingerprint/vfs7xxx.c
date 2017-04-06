@@ -187,6 +187,7 @@ struct vfsspi_device_data {
 #ifdef FEATURE_SPI_WAKELOCK
 	struct wake_lock fp_spi_lock;
 	struct wake_lock fp_signal_lock;
+	struct int fp_disable_wake_lock;
 #endif
 #endif
 	int sensortype;
@@ -270,6 +271,36 @@ void vfsspi_fp_homekey_ev(void)
 	} else
 		pr_err("%s : not set the retain pin!\n", __func__);
 }
+#endif
+
+#ifdef ENABLE_SENSORS_FPRINT_SECURE
+#ifdef FEATURE_SPI_WAKELOCK
+static void vfsspi_set_wake_lock_state(struct vfsspi_device_data *vfsspi_device, int disable_wake_lock) {
+
+	// check if the state to set is already active
+	if (vfsspi_device->fp_disable_wake_lock == disable_wake_lock) {
+		return;
+	}
+
+	// set flag
+	vfsspi_device->fp_disable_wake_lock = disable_wake_lock;
+
+	// debug-output
+	pr_info("%s set wake-lock state of vfsspi-sensor to %s", __func__, (disable_wake_lock ? "disabled" : "enabled"));
+
+	if (disable_wake_lock) {
+		// destory wake-locks
+		wake_lock_destroy(&vfsspi_device->fp_spi_lock);
+		wake_lock_destroy(&vfsspi_device->fp_signal_lock);
+	} else {
+		// initialize wake-locks
+		wake_lock_init(&vfsspi_device->fp_spi_lock,
+			WAKE_LOCK_SUSPEND, "vfsspi_wake_lock");
+		wake_lock_init(&vfsspi_device->fp_signal_lock,
+			WAKE_LOCK_SUSPEND, "vfsspi_sigwake_lock");
+	}
+}
+#endif
 #endif
 
 static int vfsspi_send_drdy_signal(struct vfsspi_device_data *vfsspi_device)
@@ -691,7 +722,9 @@ static int vfsspi_set_clk(struct vfsspi_device_data *vfsspi_device,
 
 				kfree(spi_info);
 #ifdef FEATURE_SPI_WAKELOCK
-				wake_lock(&vfsspi_device->fp_spi_lock);
+				if (!vfsspi_device->fp_disable_wake_lock) {
+					wake_lock(&vfsspi_device->fp_spi_lock);
+				}
 #endif
 				vfsspi_device->enabled_clk = true;
 			} else
@@ -821,7 +854,9 @@ static irqreturn_t vfsspi_irq(int irq, void *context)
 			vfsspi_send_drdy_signal(vfsspi_device);
 #ifdef ENABLE_SENSORS_FPRINT_SECURE
 #ifdef FEATURE_SPI_WAKELOCK
-			wake_lock_timeout(&vfsspi_device->fp_signal_lock, 3 * HZ);
+			if (!vfsspi_device->fp_disable_wake_lock) {
+				wake_lock_timeout(&vfsspi_device->fp_signal_lock, 3 * HZ);
+			}
 #endif
 #endif
 			pr_info("%s disableIrq\n", __func__);
@@ -1314,10 +1349,13 @@ static int vfsspi_platformInit(struct vfsspi_device_data *vfsspi_device)
 
 #ifdef ENABLE_SENSORS_FPRINT_SECURE
 #ifdef FEATURE_SPI_WAKELOCK
-	wake_lock_init(&vfsspi_device->fp_spi_lock,
-		WAKE_LOCK_SUSPEND, "vfsspi_wake_lock");
-	wake_lock_init(&vfsspi_device->fp_signal_lock,
-		WAKE_LOCK_SUSPEND, "vfsspi_sigwake_lock");
+	// only enable wakelocks if enabled
+	if (!vfsspi_device->fp_disable_wake_lock) {
+		wake_lock_init(&vfsspi_device->fp_spi_lock,
+			WAKE_LOCK_SUSPEND, "vfsspi_wake_lock");
+		wake_lock_init(&vfsspi_device->fp_signal_lock,
+			WAKE_LOCK_SUSPEND, "vfsspi_sigwake_lock");
+	}
 #endif
 #endif
 
@@ -1591,6 +1629,37 @@ static ssize_t vfsspi_retain_store(struct device *dev,
 }
 #endif
 
+#ifdef ENABLE_SENSORS_FPRINT_SECURE
+#ifdef FEATURE_SPI_WAKELOCK
+static ssize_t vfsspi_disable_wake_lock_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", (g_data->fp_disable_wake_lock ? 1 : 0));
+}
+
+static ssize_t vfsspi_disable_wake_lock_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	int val = 0;
+	if (sscanf(buf, "%d", &val) != 1) {
+		pr_err("%s, input parameter count was wrong.\n", __func__);
+		return -EINVAL;
+	}
+
+	if (val == 1) {
+		vfsspi_set_wake_lock_state(g_data, 1);
+	} else if (val == 0) {
+		vfsspi_set_wake_lock_state(g_data, 0);
+	} else {
+		pr_err("%s, input value was not accepted.\n", __func__);
+		return -EINVAL;
+	}
+
+	return count;
+}
+#endif
+#endif
+
 static DEVICE_ATTR(type_check, S_IRUGO,
 	vfsspi_type_check_show, NULL);
 static DEVICE_ATTR(vendor, S_IRUGO,
@@ -1599,6 +1668,14 @@ static DEVICE_ATTR(name, S_IRUGO,
 	vfsspi_name_show, NULL);
 static DEVICE_ATTR(adm, S_IRUGO,
 	vfsspi_adm_show, NULL);
+
+#ifdef ENABLE_SENSORS_FPRINT_SECURE
+#ifdef FEATURE_SPI_WAKELOCK
+static DEVICE_ATTR(disable_wake_lock, 0664,
+	vfsspi_disable_wake_lock_show, vfsspi_disable_wake_lock_store);
+#endif
+#endif
+
 #ifndef ENABLE_SENSORS_FPRINT_SECURE
 static DEVICE_ATTR(retain_pin, S_IRUGO | S_IWUSR | S_IWGRP,
 	vfsspi_retain_show, vfsspi_retain_store);
