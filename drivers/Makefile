@@ -183,8 +183,10 @@ endif
 obj-$(CONFIG_EXYNOS_BTS)	+= bts/
 obj-$(CONFIG_ESOC)	+= esoc/
 obj-$(CONFIG_SENSORS_FINGERPRINT)	+= fingerprint/
+obj-$(CONFIG_GATOR)	+= gator/
 obj-$(CONFIG_GPS_BCMxxxxx)	+= gps/
 obj-$(CONFIG_MOBICORE_DRIVER) += gud/
+obj-$(CONFIG_ICE5_FPGA_LED_MATRIX)	+= ledmatrix/
 obj-$(CONFIG_MHI)	+= mhi/
 obj-y	+= motor/
 obj-$(CONFIG_USE_MUIC)	+= muic/
