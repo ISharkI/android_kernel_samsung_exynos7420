@@ -41,4 +41,9 @@ hci_uart-$(CONFIG_BT_HCIUART_AG6XX)	+= hci_ag6xx.o
 hci_uart-$(CONFIG_BT_HCIUART_MRVL)	+= hci_mrvl.o
 hci_uart-objs				:= $(hci_uart-y)
 
+# Samsung bluetooth drivers
+obj-$(CONFIG_BT_BCM43455)		+= bcm43455.o
+obj-$(CONFIG_BT_BCM4358)		+= bcm4358.o
+obj-$(CONFIG_BT_BCM4359)	+= bcm4359.o
+
 ccflags-y += -D__CHECK_ENDIAN__

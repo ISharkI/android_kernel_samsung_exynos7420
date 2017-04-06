@@ -353,5 +353,26 @@ config BT_QCOMSMD
 
 	  Say Y here to compile support for HCI over Qualcomm SMD into the
 	  kernel or say M to compile as a module.
+	  
+config BT_BCM43455
+	bool "Enable BCM43455 driver"
+	default n
+	help
+	  Adds BCM43455 RFKILL driver for Broadcom BCM43455 chipset for exynos7420.
+	  default is n.
+
+config BT_BCM4358
+	bool "Enable BCM4358 driver"
+	default n
+	help
+	  Adds BCM4358 RFKILL driver for Broadcom BCM4358 chipset for exynos54xx.
+	  default is n.
+
+config BT_BCM4359
+	bool "Enable BCM4359 driver"
+	default n
+	help
+	  Adds BCM4359 RFKILL driver for Broadcom BCM4359 chipset for exynos54xx.
+	  default is n.
 
 endmenu
