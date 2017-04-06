@@ -173,3 +173,21 @@ obj-$(CONFIG_STM)		+= hwtracing/stm/
 obj-$(CONFIG_ANDROID)		+= android/
 obj-$(CONFIG_NVMEM)		+= nvmem/
 obj-$(CONFIG_FPGA)		+= fpga/
+
+# Samsung device and hardware drivers
+ifeq ($(CONFIG_BATTERY_SAMSUNG_V2), y)
+	obj-$(CONFIG_BATTERY_SAMSUNG)   += battery_v2/
+else
+	obj-$(CONFIG_BATTERY_SAMSUNG)   += battery/
+endif
+obj-$(CONFIG_EXYNOS_BTS)	+= bts/
+obj-$(CONFIG_ESOC)	+= esoc/
+obj-$(CONFIG_SENSORS_FINGERPRINT)	+= fingerprint/
+obj-$(CONFIG_GPS_BCMxxxxx)	+= gps/
+obj-$(CONFIG_MOBICORE_DRIVER) += gud/
+obj-$(CONFIG_MHI)	+= mhi/
+obj-y	+= motor/
+obj-$(CONFIG_USE_MUIC)	+= muic/
+obj-$(CONFIG_SENSORS_SSP)	+= sensorhub/
+obj-$(CONFIG_SENSORS_CORE)	+= sensors/
+obj-$(CONFIG_SWITCH) += switch/
