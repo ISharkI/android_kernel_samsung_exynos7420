@@ -20,10 +20,37 @@
 #include <linux/sizes.h>
 #include <linux/limits.h>
 #include <linux/clk/clk-conf.h>
+#include <plat/cpu.h>
 
 #include <asm/irq.h>
 
 #define to_amba_driver(d)	container_of(d, struct amba_driver, drv)
+
+void adma_init_clock(void)
+{
+	unsigned int reg;
+	void __iomem *lpass_dma_reset;
+
+	/**
+	 * Audio DMA in some Exynos-based SoCs are placed within LPASS block.
+	 * The LPASS block needs to be reset before accessing the registers of
+	 * ADMA controller. LPASS base address is different for Exynos7580 as
+	 * compared to other SoCs. Adding an explicit check for this.
+	 */
+
+	if (soc_is_exynos7580())
+		lpass_dma_reset = ioremap(0x11000000, SZ_32);
+	else
+		lpass_dma_reset = ioremap(0x11400000, SZ_32);
+
+	reg = __raw_readl(lpass_dma_reset + 0x8);
+	reg &= ~0x1;
+	__raw_writel(reg, lpass_dma_reset + 0x8);
+	reg |= 0x1;
+	__raw_writel(reg, lpass_dma_reset + 0x8);
+
+	iounmap(lpass_dma_reset);
+}
 
 static const struct amba_id *
 amba_lookup(const struct amba_id *table, struct amba_device *dev)
@@ -349,6 +376,9 @@ static int amba_device_try_add(struct amba_device *dev, struct resource *parent)
 
 	WARN_ON(dev->irq[0] == (unsigned int)-1);
 	WARN_ON(dev->irq[1] == (unsigned int)-1);
+	
+	if (strstr(dev_name(&dev->dev), "adma"))
+		adma_init_clock();
 
 	ret = request_resource(parent, &dev->res);
 	if (ret)
@@ -395,8 +425,12 @@ static int amba_device_try_add(struct amba_device *dev, struct resource *parent)
 		if (cid == AMBA_CID || cid == CORESIGHT_CID)
 			dev->periphid = pid;
 
-		if (!dev->periphid)
+		if (!dev->periphid) {
+			if (strstr(dev_name(&dev->dev), "adma"))
+				dev_err(&dev->dev, "Please reset LPASS\n");
+
 			ret = -ENODEV;
+		}
 	}
 
 	iounmap(tmp);
