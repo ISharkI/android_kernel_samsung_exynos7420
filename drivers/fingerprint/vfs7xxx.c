@@ -187,7 +187,7 @@ struct vfsspi_device_data {
 #ifdef FEATURE_SPI_WAKELOCK
 	struct wake_lock fp_spi_lock;
 	struct wake_lock fp_signal_lock;
-	struct int fp_disable_wake_lock;
+	int fp_disable_wake_lock;
 #endif
 #endif
 	int sensortype;
