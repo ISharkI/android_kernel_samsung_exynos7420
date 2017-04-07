@@ -1686,6 +1686,7 @@ static struct device_attribute *fp_attrs[] = {
 	&dev_attr_vendor,
 	&dev_attr_name,
 	&dev_attr_adm,
+	&dev_attr_disable_wake_lock,
 #ifndef ENABLE_SENSORS_FPRINT_SECURE
 	&dev_attr_retain_pin,
 #endif
