@@ -426,8 +426,6 @@ static void *persistent_ram_vmap(phys_addr_t start, size_t size,
 static void *persistent_ram_iomap(phys_addr_t start, size_t size,
 		unsigned int memtype)
 {
-	void *va;
-
 	if (!request_mem_region(start, size, "persistent_ram")) {
 		pr_err("request mem region (0x%llx@0x%llx) failed\n",
 			(unsigned long long)size, (unsigned long long)start);
@@ -438,11 +436,9 @@ static void *persistent_ram_iomap(phys_addr_t start, size_t size,
 	buffer_size_add = buffer_size_add_locked;
 
 	if (memtype)
-		va = ioremap(start, size);
+		return ioremap(start, size);
 	else
-		va = ioremap_wc(start, size);
-
-	return va;
+		return ioremap_wc(start, size);
 }
 
 static int persistent_ram_buffer_map(phys_addr_t start, phys_addr_t size,
