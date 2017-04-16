@@ -4780,7 +4780,8 @@ do_more:
 	     !ext4_should_writeback_data(inode))) {
 		struct ext4_free_data *new_entry;
 	retry:
-		new_entry = kmem_cache_alloc(ext4_free_data_cachep, GFP_NOFS);
+		new_entry = kmem_cache_alloc(ext4_free_data_cachep,
+				GFP_NOFS|__GFP_NOFAIL);
 		if (!new_entry) {
 			/*
 			 * We use a retry loop because
