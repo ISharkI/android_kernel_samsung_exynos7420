@@ -117,11 +117,18 @@ static struct workqueue_struct *thread_manage_wq;
 static int dm_hotplug_disable = 0;
 int disable_dm_hotplug_before_suspend = 0;
 
-static int exynos_dm_hotplug_disabled(void)
+#ifndef CONFIG_CPU_FREQ_GOV_INTERGALACTIC
+static
+#endif
+int exynos_dm_hotplug_disabled(void)
 {
 	return dm_hotplug_disable;
 }
-static void exynos_dm_hotplug_enable(void)
+
+#ifndef CONFIG_CPU_FREQ_GOV_INTERGALACTIC
+static
+#endif
+void exynos_dm_hotplug_enable(void)
 {
 	mutex_lock(&dm_hotplug_lock);
 	if (!exynos_dm_hotplug_disabled()) {
@@ -136,7 +143,10 @@ static void exynos_dm_hotplug_enable(void)
 	mutex_unlock(&dm_hotplug_lock);
 }
 
-static void exynos_dm_hotplug_disable(void)
+#ifndef CONFIG_CPU_FREQ_GOV_INTERGALACTIC
+static
+#endif
+void exynos_dm_hotplug_disable(void)
 {
 	mutex_lock(&dm_hotplug_lock);
 	dm_hotplug_disable = 1;

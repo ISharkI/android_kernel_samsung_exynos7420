@@ -160,6 +160,18 @@ config CPU_FREQ_DEFAULT_GOV_INTERACTIVE
 	  loading your cpufreq low-level hardware driver, using the
 	  'interactive' governor for latency-sensitive workloads.
 
+config CPU_FREQ_DEFAULT_GOV_INTERGALACTIC
+	bool "interactive"
+	select CPU_FREQ_GOV_INTERGALACTIC
+	help
+	  Use the CPUFreq governor 'intergalactic' as default. This allows
+	  you to get a full dynamic cpu frequency capable system by simply
+	  loading your cpufreq low-level hardware driver, using the
+	  'interactive' governor for latency-sensitive workloads. In addition,
+	  this governor allows hotplugging of all CPU-cores except the 
+	  policy-cores (cpu0 (apollo) and cpu4 (atlas)) according to the
+	  current CPU-load.
+
 config CPU_FREQ_DEFAULT_GOV_DANCEDANCE
             bool "dancedance"
             select CPU_FREQ_GOV_DANCEDANCE
@@ -287,6 +299,31 @@ config CPU_FREQ_GOV_INTERACTIVE
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called cpufreq_interactive.
+
+	  For details, take a look at linux/Documentation/cpu-freq.
+
+	  If in doubt, say N.
+
+config CPU_FREQ_GOV_INTERGALACTIC
+	tristate "'intergalactic' cpufreq policy governor"
+	depends on HOTPLUG_CPU && (ARM_BIG_LITTLE_CPUFREQ || ARM_EXYNOS_MP_CPUFREQ)
+	help
+	  'intergalactic' - This driver adds a dynamic cpufreq policy governor
+	  designed for latency-sensitive workloads.
+	  
+	  Depends on ARM big.LITTLE CPU-architecture and CPU hotplugging
+	  ability, requires 8 cores
+
+	  This governor attempts to reduce the latency of clock
+	  increases so that the system is more responsive to
+	  interactive workloads.
+	  
+	  In addition, this governor allows hotplugging of all CPU-cores
+	  except the policy-cores (cpu0 (apollo) and cpu4 (atlas)) according
+	  to the current CPU-load.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_intergalactic.
 
 	  For details, take a look at linux/Documentation/cpu-freq.
 
