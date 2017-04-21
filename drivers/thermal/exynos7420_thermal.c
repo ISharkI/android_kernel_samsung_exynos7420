@@ -230,50 +230,6 @@ static int exynos_get_crit_temp(struct thermal_zone_device *thermal,
 	return ret;
 }
 
-/*
- * used to convert increaed/decreased frequencies
- * to the real frequencies the CPU-policies expect
- */
-static int exynos_correct_cpu_frequencies(int cluster, int freq) {
-	switch (freq) {
-
-		case 1100000:
-			if (cluster == 0) { // apollo
-				return 1104000;
-			}
-			break;
-
-		case 1300000:
-			if (cluster == 0) { // apollo
-				return 1296000;
-			}
-			break;
-
-		case 1700000:
-			return 1704000;
-
-		case 1900000:
-			if (cluster == 1) { // atlas
-				return 1896000;
-			}
-			break;
-
-		case 2300000:
-			if (cluster == 1) { // atlas
-				return 2304000;
-			}
-			break;
-
-		case 2500000:
-			if (cluster == 1) { // atlas
-				return 2496000;
-			}
-			break;
-	}
-
-	return freq;
-}
-
 /* Bind callback functions for thermal zone */
 static int exynos_bind(struct thermal_zone_device *thermal,
 			struct thermal_cooling_device *cdev)
@@ -321,24 +277,6 @@ static int exynos_bind(struct thermal_zone_device *thermal,
 				pr_warn("%s: throttling freq(%d) is less than policy min(%d)\n", __func__, clip_data->freq_clip_max_cluster0, policy.min);
 				clip_data->freq_clip_max_cluster0 = policy.min;
 			}
-			
-			/*
-			 * The cluster should not stuck on the lowest frequency.
-			 * Increase it by 400 MHz, but check if the user has
-			 * set a lower max-frequency
-			 */
-			if (clip_data->freq_clip_max_cluster0 == policy.min) {
-				clip_data->freq_clip_max_cluster0 += 400000;
-				
-				// correct the frequency
-				clip_data->freq_clip_max_cluster0 = 
-					exynos_correct_cpu_frequencies(0, clip_data->freq_clip_max_cluster0);
-				
-				if (clip_data->freq_clip_max_cluster0 > policy.max) {
-					pr_warn("%s: user set lower maximal frequency(%d) than wanted throttling-frequency(%d)\n", __func__, policy.max, clip_data->freq_clip_max_cluster0);
-					clip_data->freq_clip_max_cluster0 = policy.max;
-				}
-			}
 
 			level = cpufreq_cooling_get_level(CLUST0_POLICY_CORE, clip_data->freq_clip_max_cluster0);
 		} else if (cluster_idx == CL_ONE) {
@@ -350,24 +288,6 @@ static int exynos_bind(struct thermal_zone_device *thermal,
 			} else if (clip_data->freq_clip_max < policy.min) {
 				pr_warn("%s: throttling freq(%d) is less than policy min(%d)\n", __func__, clip_data->freq_clip_max, policy.min);
 				clip_data->freq_clip_max = policy.min;
-			}
-			
-			/*
-			 * The cluster should not stuck on the lowest frequency.
-			 * Increase it by 400 MHz, but check if the user has
-			 * set a lower max-frequency
-			 */
-			if (clip_data->freq_clip_max == policy.min) {
-				clip_data->freq_clip_max += 400000;
-				
-				// correct the frequency
-				clip_data->freq_clip_max = 
-					exynos_correct_cpu_frequencies(1, clip_data->freq_clip_max);
-				
-				if (clip_data->freq_clip_max > policy.max) {
-					pr_warn("%s: user set lower maximal frequency(%d) than wanted throttling-frequency(%d)\n", __func__, policy.max, clip_data->freq_clip_max);
-					clip_data->freq_clip_max = policy.max;
-				}
 			}
 
 			level = cpufreq_cooling_get_level(CLUST1_POLICY_CORE, clip_data->freq_clip_max);
