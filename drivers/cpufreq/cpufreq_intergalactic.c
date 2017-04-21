@@ -49,7 +49,7 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/cpufreq_intergalactic.h>
 
-struct cpufreq_interactive_cpuinfo {
+struct cpufreq_intergalactic_cpuinfo {
 	struct timer_list cpu_timer;
 	struct timer_list cpu_slack_timer;
 	spinlock_t load_lock; /* protects the next 4 fields */
@@ -75,7 +75,7 @@ struct cpufreq_interactive_cpuinfo {
 #endif
 };
 
-static DEFINE_PER_CPU(struct cpufreq_interactive_cpuinfo, cpuinfo);
+static DEFINE_PER_CPU(struct cpufreq_intergalactic_cpuinfo, cpuinfo);
 
 static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
@@ -134,8 +134,8 @@ static bool hmp_boost;
 static DEFINE_PER_CPU(struct cpufreq_loadinfo, loadinfo);
 static DEFINE_PER_CPU(unsigned int, cpu_util);
 
-#ifdef CONFIG_CPU_FREQ_GOV_INTERACTIVE
-unsigned int cpufreq_interactive_get_hispeed_freq(int cpu);
+#ifdef CONFIG_CPU_FREQ_GOV_intergalactic
+unsigned int cpufreq_intergalactic_get_hispeed_freq(int cpu);
 #endif
 
 static struct pm_qos_request cluster0_min_freq_qos;
@@ -157,7 +157,7 @@ static unsigned int cluster0_min_freq=0;
 }
 #endif /* CONFIG_MODE_AUTO_CHANGE */
 
-struct cpufreq_interactive_tunables {
+struct cpufreq_intergalactic_tunables {
 	int usage_count;
 	/* Hi speed to bump to from lo speed when load burst (default max) */
 	unsigned int hispeed_freq;
@@ -281,8 +281,8 @@ struct cpufreq_interactive_tunables {
 #define STORE_AS_BOOL(i) (i ? 1 : 0)
 
 /* For cases where we have single governor instance for system */
-static struct cpufreq_interactive_tunables *common_tunables;
-static struct cpufreq_interactive_tunables *tuned_parameters[NR_CPUS] = {NULL, };
+static struct cpufreq_intergalactic_tunables *common_tunables;
+static struct cpufreq_intergalactic_tunables *tuned_parameters[NR_CPUS] = {NULL, };
 
 static struct attribute_group *get_sysfs_attr(void);
 
@@ -324,10 +324,10 @@ static inline cputime64_t get_cpu_idle_time(
 	return idle_time;
 }
 
-static void cpufreq_interactive_timer_resched(
-	struct cpufreq_interactive_cpuinfo *pcpu)
+static void cpufreq_intergalactic_timer_resched(
+	struct cpufreq_intergalactic_cpuinfo *pcpu)
 {
-	struct cpufreq_interactive_tunables *tunables =
+	struct cpufreq_intergalactic_tunables *tunables =
 		pcpu->policy->governor_data;
 	unsigned long expires;
 	unsigned long flags;
@@ -362,10 +362,10 @@ static void cpufreq_interactive_timer_resched(
  * The cpu_timer and cpu_slack_timer must be deactivated when calling this
  * function.
  */
-static void cpufreq_interactive_timer_start(
-	struct cpufreq_interactive_tunables *tunables, int cpu)
+static void cpufreq_intergalactic_timer_start(
+	struct cpufreq_intergalactic_tunables *tunables, int cpu)
 {
-	struct cpufreq_interactive_cpuinfo *pcpu = &per_cpu(cpuinfo, cpu);
+	struct cpufreq_intergalactic_cpuinfo *pcpu = &per_cpu(cpuinfo, cpu);
 	unsigned long expires = jiffies +
 		usecs_to_jiffies(tunables->timer_rate);
 	unsigned long flags;
@@ -396,7 +396,7 @@ static void cpufreq_interactive_timer_start(
 }
 
 static unsigned int freq_to_above_hispeed_delay(
-	struct cpufreq_interactive_tunables *tunables,
+	struct cpufreq_intergalactic_tunables *tunables,
 	unsigned int freq)
 {
 	int i;
@@ -415,7 +415,7 @@ static unsigned int freq_to_above_hispeed_delay(
 }
 
 static unsigned int freq_to_targetload(
-	struct cpufreq_interactive_tunables *tunables, unsigned int freq)
+	struct cpufreq_intergalactic_tunables *tunables, unsigned int freq)
 {
 	int i;
 	unsigned int ret;
@@ -437,7 +437,7 @@ static unsigned int freq_to_targetload(
  * choose_freq() will find the minimum frequency that does not exceed its
  * target load given the current load.
  */
-static unsigned int choose_freq(struct cpufreq_interactive_cpuinfo *pcpu,
+static unsigned int choose_freq(struct cpufreq_intergalactic_cpuinfo *pcpu,
 		unsigned int loadadjfreq)
 {
 	unsigned int freq = pcpu->policy->cur;
@@ -524,8 +524,8 @@ static unsigned int choose_freq(struct cpufreq_interactive_cpuinfo *pcpu,
 
 static u64 update_load(int cpu)
 {
-	struct cpufreq_interactive_cpuinfo *pcpu = &per_cpu(cpuinfo, cpu);
-	struct cpufreq_interactive_tunables *tunables =
+	struct cpufreq_intergalactic_cpuinfo *pcpu = &per_cpu(cpuinfo, cpu);
+	struct cpufreq_intergalactic_tunables *tunables =
 		pcpu->policy->governor_data;
 	u64 now;
 	u64 now_idle;
@@ -569,8 +569,8 @@ static unsigned int check_mode(int cpu, unsigned int cur_mode, u64 now)
 	int i;
 	unsigned int ret=cur_mode, total_load=0, max_single_load=0;
 	struct cpufreq_loadinfo *cur_loadinfo;
-	struct cpufreq_interactive_cpuinfo *pcpu = &per_cpu(cpuinfo, cpu);
-	struct cpufreq_interactive_tunables *tunables =
+	struct cpufreq_intergalactic_cpuinfo *pcpu = &per_cpu(cpuinfo, cpu);
+	struct cpufreq_intergalactic_tunables *tunables =
 		pcpu->policy->governor_data;
 
 	if (now - tunables->mode_check_timestamp < tunables->timer_rate - USEC_PER_MSEC)
@@ -650,7 +650,7 @@ static unsigned int check_mode(int cpu, unsigned int cur_mode, u64 now)
 }
 
 static void set_new_param_set(unsigned int index,
-			struct cpufreq_interactive_tunables * tunables)
+			struct cpufreq_intergalactic_tunables * tunables)
 {
 	unsigned long flags;
 
@@ -674,7 +674,7 @@ static void set_new_param_set(unsigned int index,
 	tunables->cur_param_index = index;
 }
 
-static void enter_mode(struct cpufreq_interactive_tunables * tunables)
+static void enter_mode(struct cpufreq_intergalactic_tunables * tunables)
 {
 	set_new_param_set(tunables->mode, tunables);
 	if(tunables->mode & SINGLE_MODE)
@@ -690,7 +690,7 @@ static void enter_mode(struct cpufreq_interactive_tunables * tunables)
 	queue_work(mode_auto_change_minlock_wq, &mode_auto_change_minlock_work);
 }
 
-static void exit_mode(struct cpufreq_interactive_tunables * tunables)
+static void exit_mode(struct cpufreq_intergalactic_tunables * tunables)
 {
 	set_new_param_set(0, tunables);
 	cluster0_min_freq = 0;
@@ -705,7 +705,7 @@ static void exit_mode(struct cpufreq_interactive_tunables * tunables)
 }
 #endif
 
-static void disable_hotplugging(struct cpufreq_interactive_tunables *tunables)
+static void disable_hotplugging(struct cpufreq_intergalactic_tunables *tunables)
 {
 	/*
 	 * If dynamic hotplugging was not disabled and cpugov-hotplugging was
@@ -741,16 +741,16 @@ static void __cpuinit cpugov_hotplugging_worker(struct work_struct *work)
 	spin_unlock(&cpu_hotplugging_lock);
 }
 
-static void cpufreq_interactive_timer(unsigned long data)
+static void cpufreq_intergalactic_timer(unsigned long data)
 {
 	u64 now;
 	u64 ktime_now;
 	unsigned int delta_time;
 	u64 cputime_speedadj;
 	int cpu_load;
-	struct cpufreq_interactive_cpuinfo *pcpu =
+	struct cpufreq_intergalactic_cpuinfo *pcpu =
 		&per_cpu(cpuinfo, data);
-	struct cpufreq_interactive_tunables *tunables =
+	struct cpufreq_intergalactic_tunables *tunables =
 		pcpu->policy->governor_data;
 	unsigned int new_freq;
 	unsigned int loadadjfreq;
@@ -1014,16 +1014,16 @@ rearm_if_notmax:
 
 rearm:
 	if (!timer_pending(&pcpu->cpu_timer))
-		cpufreq_interactive_timer_resched(pcpu);
+		cpufreq_intergalactic_timer_resched(pcpu);
 
 exit:
 	up_read(&pcpu->enable_sem);
 	return;
 }
 
-static void cpufreq_interactive_idle_start(void)
+static void cpufreq_intergalactic_idle_start(void)
 {
-	struct cpufreq_interactive_cpuinfo *pcpu =
+	struct cpufreq_intergalactic_cpuinfo *pcpu =
 		&per_cpu(cpuinfo, smp_processor_id());
 	int pending;
 
@@ -1046,15 +1046,15 @@ static void cpufreq_interactive_idle_start(void)
 		 * the CPUFreq driver.
 		 */
 		if (!pending)
-			cpufreq_interactive_timer_resched(pcpu);
+			cpufreq_intergalactic_timer_resched(pcpu);
 	}
 
 	up_read(&pcpu->enable_sem);
 }
 
-static void cpufreq_interactive_idle_end(void)
+static void cpufreq_intergalactic_idle_end(void)
 {
-	struct cpufreq_interactive_cpuinfo *pcpu =
+	struct cpufreq_intergalactic_cpuinfo *pcpu =
 		&per_cpu(cpuinfo, smp_processor_id());
 
 	if (!down_read_trylock(&pcpu->enable_sem))
@@ -1066,18 +1066,18 @@ static void cpufreq_interactive_idle_end(void)
 
 	/* Arm the timer for 1-2 ticks later if not already. */
 	if (!timer_pending(&pcpu->cpu_timer)) {
-		cpufreq_interactive_timer_resched(pcpu);
+		cpufreq_intergalactic_timer_resched(pcpu);
 	} else if (time_after_eq(jiffies, pcpu->cpu_timer.expires)) {
 		del_timer(&pcpu->cpu_timer);
 		del_timer(&pcpu->cpu_slack_timer);
-		cpufreq_interactive_timer(smp_processor_id());
+		cpufreq_intergalactic_timer(smp_processor_id());
 	}
 
 	up_read(&pcpu->enable_sem);
 }
 
 #ifdef CONFIG_PMU_COREMEM_RATIO
-static void region_update_status(struct cpufreq_interactive_tunables *tunables)
+static void region_update_status(struct cpufreq_intergalactic_tunables *tunables)
 {
 	unsigned long cur_time;
 
@@ -1087,13 +1087,13 @@ static void region_update_status(struct cpufreq_interactive_tunables *tunables)
 	tunables->region_last_stat = cur_time;
 }
 
-static int cpufreq_interactive_regionchange_task(void *data)
+static int cpufreq_intergalactic_regionchange_task(void *data)
 {
 	unsigned int cpu;
 	cpumask_t tmp_mask;
 	cpumask_t policy_mask;
 	unsigned long flags;
-	struct cpufreq_interactive_cpuinfo *pcpu;
+	struct cpufreq_intergalactic_cpuinfo *pcpu;
 
 	while (1) {
 		set_current_state(TASK_INTERRUPTIBLE);
@@ -1123,7 +1123,7 @@ static int cpufreq_interactive_regionchange_task(void *data)
 		for_each_cpu(cpu, &tmp_mask) {
 			unsigned int j;
 			unsigned int max_region = 0;
-			struct cpufreq_interactive_tunables *tunables;
+			struct cpufreq_intergalactic_tunables *tunables;
 
 			pcpu = &per_cpu(cpuinfo, cpu);
 			tunables = pcpu->policy->governor_data;
@@ -1137,7 +1137,7 @@ static int cpufreq_interactive_regionchange_task(void *data)
 
 			tunables->prev_max_region = tunables->max_region;
 			for_each_cpu(j, pcpu->policy->cpus) {
-				struct cpufreq_interactive_cpuinfo *pjcpu =
+				struct cpufreq_intergalactic_cpuinfo *pjcpu =
 					&per_cpu(cpuinfo, j);
 
 				if (pjcpu->region > max_region)
@@ -1158,13 +1158,13 @@ static int cpufreq_interactive_regionchange_task(void *data)
 }
 #endif
 
-static int cpufreq_interactive_speedchange_task(void *data)
+static int cpufreq_intergalactic_speedchange_task(void *data)
 {
 	unsigned int cpu;
 	cpumask_t tmp_mask;
 	cpumask_t policy_mask;
 	unsigned long flags;
-	struct cpufreq_interactive_cpuinfo *pcpu;
+	struct cpufreq_intergalactic_cpuinfo *pcpu;
 
 	while (1) {
 		set_current_state(TASK_INTERRUPTIBLE);
@@ -1195,7 +1195,7 @@ static int cpufreq_interactive_speedchange_task(void *data)
 		for_each_cpu(cpu, &tmp_mask) {
 			unsigned int j;
 			unsigned int max_freq = 0;
-			struct cpufreq_interactive_cpuinfo *pjcpu;
+			struct cpufreq_intergalactic_cpuinfo *pjcpu;
 
 			pcpu = &per_cpu(cpuinfo, cpu);
 
@@ -1240,13 +1240,13 @@ static int cpufreq_interactive_speedchange_task(void *data)
 	return 0;
 }
 
-static void cpufreq_interactive_boost(const struct cpufreq_policy *policy)
+static void cpufreq_intergalactic_boost(const struct cpufreq_policy *policy)
 {
 	int i;
 	int anyboost = 0;
 	unsigned long flags[2];
-	struct cpufreq_interactive_cpuinfo *pcpu;
-	struct cpufreq_interactive_tunables *tunables;
+	struct cpufreq_intergalactic_cpuinfo *pcpu;
+	struct cpufreq_intergalactic_tunables *tunables;
 	struct cpumask boost_mask;
 
 	spin_lock_irqsave(&speedchange_cpumask_lock, flags[0]);
@@ -1286,11 +1286,11 @@ static void cpufreq_interactive_boost(const struct cpufreq_policy *policy)
 		wake_up_process(tunables->speedchange_task);
 }
 
-static int cpufreq_interactive_notifier(
+static int cpufreq_intergalactic_notifier(
 	struct notifier_block *nb, unsigned long val, void *data)
 {
 	struct cpufreq_freqs *freq = data;
-	struct cpufreq_interactive_cpuinfo *pcpu;
+	struct cpufreq_intergalactic_cpuinfo *pcpu;
 	int cpu;
 	unsigned long flags;
 
@@ -1304,7 +1304,7 @@ static int cpufreq_interactive_notifier(
 		}
 
 		for_each_cpu(cpu, pcpu->policy->cpus) {
-			struct cpufreq_interactive_cpuinfo *pjcpu =
+			struct cpufreq_intergalactic_cpuinfo *pjcpu =
 				&per_cpu(cpuinfo, cpu);
 			if (cpu != freq->cpu) {
 				if (!down_read_trylock(&pjcpu->enable_sem))
@@ -1327,7 +1327,7 @@ static int cpufreq_interactive_notifier(
 }
 
 static struct notifier_block cpufreq_notifier_block = {
-	.notifier_call = cpufreq_interactive_notifier,
+	.notifier_call = cpufreq_intergalactic_notifier,
 };
 
 static unsigned int *get_tokenized_data(const char *buf, int *num_tokens)
@@ -1376,7 +1376,7 @@ err:
 }
 
 static ssize_t show_target_loads(
-	struct cpufreq_interactive_tunables *tunables,
+	struct cpufreq_intergalactic_tunables *tunables,
 	char *buf)
 {
 	int i;
@@ -1405,7 +1405,7 @@ static ssize_t show_target_loads(
 }
 
 static ssize_t store_target_loads(
-	struct cpufreq_interactive_tunables *tunables,
+	struct cpufreq_intergalactic_tunables *tunables,
 	const char *buf, size_t count)
 {
 	int ntokens;
@@ -1442,13 +1442,13 @@ static ssize_t store_target_loads(
 	return count;
 }
 
-static ssize_t show_hotplugging(struct cpufreq_interactive_tunables *tunables,
+static ssize_t show_hotplugging(struct cpufreq_intergalactic_tunables *tunables,
 		char *buf)
 {
 	return sprintf(buf, "%d\n", tunables->hotplugging);
 }
 
-static ssize_t store_hotplugging(struct cpufreq_interactive_tunables *tunables,
+static ssize_t store_hotplugging(struct cpufreq_intergalactic_tunables *tunables,
 		const char *buf, size_t count)
 {
 	int ret;
@@ -1478,13 +1478,13 @@ static ssize_t store_hotplugging(struct cpufreq_interactive_tunables *tunables,
 	return count;
 }
 
-static ssize_t show_hotplug_min_in_cores(struct cpufreq_interactive_tunables *tunables,
+static ssize_t show_hotplug_min_in_cores(struct cpufreq_intergalactic_tunables *tunables,
 		char *buf)
 {
 	return sprintf(buf, "%d\n", tunables->hotplug_min_in_cores);
 }
 
-static ssize_t store_hotplug_min_in_cores(struct cpufreq_interactive_tunables *tunables,
+static ssize_t store_hotplug_min_in_cores(struct cpufreq_intergalactic_tunables *tunables,
 		const char *buf, size_t count)
 {
 	int ret;
@@ -1502,13 +1502,13 @@ static ssize_t store_hotplug_min_in_cores(struct cpufreq_interactive_tunables *t
 	return count;
 }
 
-static ssize_t show_hotplug_max_in_cores(struct cpufreq_interactive_tunables *tunables,
+static ssize_t show_hotplug_max_in_cores(struct cpufreq_intergalactic_tunables *tunables,
 		char *buf)
 {
 	return sprintf(buf, "%d\n", tunables->hotplug_max_in_cores);
 }
 
-static ssize_t store_hotplug_max_in_cores(struct cpufreq_interactive_tunables *tunables,
+static ssize_t store_hotplug_max_in_cores(struct cpufreq_intergalactic_tunables *tunables,
 		const char *buf, size_t count)
 {
 	int ret;
@@ -1526,13 +1526,13 @@ static ssize_t store_hotplug_max_in_cores(struct cpufreq_interactive_tunables *t
 	return count;
 }
 
-static ssize_t show_hotplug_in_load(struct cpufreq_interactive_tunables *tunables,
+static ssize_t show_hotplug_in_load(struct cpufreq_intergalactic_tunables *tunables,
 		char *buf)
 {
 	return sprintf(buf, "%d\n", tunables->hotplug_in_load);
 }
 
-static ssize_t store_hotplug_in_load(struct cpufreq_interactive_tunables *tunables,
+static ssize_t store_hotplug_in_load(struct cpufreq_intergalactic_tunables *tunables,
 		const char *buf, size_t count)
 {
 	int ret;
@@ -1550,13 +1550,13 @@ static ssize_t store_hotplug_in_load(struct cpufreq_interactive_tunables *tunabl
 	return count;
 }
 
-static ssize_t show_hotplug_out_load(struct cpufreq_interactive_tunables *tunables,
+static ssize_t show_hotplug_out_load(struct cpufreq_intergalactic_tunables *tunables,
 		char *buf)
 {
 	return sprintf(buf, "%d\n", tunables->hotplug_out_load);
 }
 
-static ssize_t store_hotplug_out_load(struct cpufreq_interactive_tunables *tunables,
+static ssize_t store_hotplug_out_load(struct cpufreq_intergalactic_tunables *tunables,
 		const char *buf, size_t count)
 {
 	int ret;
@@ -1574,13 +1574,13 @@ static ssize_t store_hotplug_out_load(struct cpufreq_interactive_tunables *tunab
 	return count;
 }
 
-static ssize_t show_hotplug_min_plug_time(struct cpufreq_interactive_tunables *tunables,
+static ssize_t show_hotplug_min_plug_time(struct cpufreq_intergalactic_tunables *tunables,
 		char *buf)
 {
 	return sprintf(buf, "%d\n", tunables->hotplug_min_plug_time);
 }
 
-static ssize_t store_hotplug_min_plug_time(struct cpufreq_interactive_tunables *tunables,
+static ssize_t store_hotplug_min_plug_time(struct cpufreq_intergalactic_tunables *tunables,
 		const char *buf, size_t count)
 {
 	int ret;
@@ -1595,7 +1595,7 @@ static ssize_t store_hotplug_min_plug_time(struct cpufreq_interactive_tunables *
 }
 
 static ssize_t show_above_hispeed_delay(
-	struct cpufreq_interactive_tunables *tunables, char *buf)
+	struct cpufreq_intergalactic_tunables *tunables, char *buf)
 {
 	int i;
 	ssize_t ret = 0;
@@ -1624,7 +1624,7 @@ static ssize_t show_above_hispeed_delay(
 }
 
 static ssize_t store_above_hispeed_delay(
-	struct cpufreq_interactive_tunables *tunables,
+	struct cpufreq_intergalactic_tunables *tunables,
 	const char *buf, size_t count)
 {
 	int ntokens;
@@ -1661,13 +1661,13 @@ static ssize_t store_above_hispeed_delay(
 
 }
 
-static ssize_t show_enforce_hispeed_freq_limit(struct cpufreq_interactive_tunables *tunables,
+static ssize_t show_enforce_hispeed_freq_limit(struct cpufreq_intergalactic_tunables *tunables,
 		char *buf)
 {
 	return sprintf(buf, "%d\n", tunables->enforce_hispeed_freq_limit);
 }
 
-static ssize_t store_enforce_hispeed_freq_limit(struct cpufreq_interactive_tunables *tunables,
+static ssize_t store_enforce_hispeed_freq_limit(struct cpufreq_intergalactic_tunables *tunables,
 		const char *buf, size_t count)
 {
 	int ret;
@@ -1681,7 +1681,7 @@ static ssize_t store_enforce_hispeed_freq_limit(struct cpufreq_interactive_tunab
 	return count;
 }
 
-static ssize_t show_hispeed_freq(struct cpufreq_interactive_tunables *tunables,
+static ssize_t show_hispeed_freq(struct cpufreq_intergalactic_tunables *tunables,
 		char *buf)
 {
 #ifdef CONFIG_MODE_AUTO_CHANGE
@@ -1691,7 +1691,7 @@ static ssize_t show_hispeed_freq(struct cpufreq_interactive_tunables *tunables,
 #endif
 }
 
-static ssize_t store_hispeed_freq(struct cpufreq_interactive_tunables *tunables,
+static ssize_t store_hispeed_freq(struct cpufreq_intergalactic_tunables *tunables,
 		const char *buf, size_t count)
 {
 	int ret;
@@ -1714,7 +1714,7 @@ static ssize_t store_hispeed_freq(struct cpufreq_interactive_tunables *tunables,
 	return count;
 }
 
-static ssize_t show_go_hispeed_load(struct cpufreq_interactive_tunables
+static ssize_t show_go_hispeed_load(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 #ifdef CONFIG_MODE_AUTO_CHANGE
@@ -1724,7 +1724,7 @@ static ssize_t show_go_hispeed_load(struct cpufreq_interactive_tunables
 #endif
 }
 
-static ssize_t store_go_hispeed_load(struct cpufreq_interactive_tunables
+static ssize_t store_go_hispeed_load(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -1747,7 +1747,7 @@ static ssize_t store_go_hispeed_load(struct cpufreq_interactive_tunables
 	return count;
 }
 
-static ssize_t show_min_sample_time(struct cpufreq_interactive_tunables
+static ssize_t show_min_sample_time(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 #ifdef CONFIG_MODE_AUTO_CHANGE
@@ -1757,7 +1757,7 @@ static ssize_t show_min_sample_time(struct cpufreq_interactive_tunables
 #endif
 }
 
-static ssize_t store_min_sample_time(struct cpufreq_interactive_tunables
+static ssize_t store_min_sample_time(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -1780,7 +1780,7 @@ static ssize_t store_min_sample_time(struct cpufreq_interactive_tunables
 	return count;
 }
 
-static ssize_t show_timer_rate(struct cpufreq_interactive_tunables *tunables,
+static ssize_t show_timer_rate(struct cpufreq_intergalactic_tunables *tunables,
 		char *buf)
 {
 #ifdef CONFIG_MODE_AUTO_CHANGE
@@ -1790,7 +1790,7 @@ static ssize_t show_timer_rate(struct cpufreq_interactive_tunables *tunables,
 #endif
 }
 
-static ssize_t store_timer_rate(struct cpufreq_interactive_tunables *tunables,
+static ssize_t store_timer_rate(struct cpufreq_intergalactic_tunables *tunables,
 		const char *buf, size_t count)
 {
 	int ret;
@@ -1813,13 +1813,13 @@ static ssize_t store_timer_rate(struct cpufreq_interactive_tunables *tunables,
 	return count;
 }
 
-static ssize_t show_timer_slack(struct cpufreq_interactive_tunables *tunables,
+static ssize_t show_timer_slack(struct cpufreq_intergalactic_tunables *tunables,
 		char *buf)
 {
 	return sprintf(buf, "%d\n", tunables->timer_slack_val);
 }
 
-static ssize_t store_timer_slack(struct cpufreq_interactive_tunables *tunables,
+static ssize_t store_timer_slack(struct cpufreq_intergalactic_tunables *tunables,
 		const char *buf, size_t count)
 {
 	int ret;
@@ -1833,13 +1833,13 @@ static ssize_t store_timer_slack(struct cpufreq_interactive_tunables *tunables,
 	return count;
 }
 
-static ssize_t show_boost(struct cpufreq_interactive_tunables *tunables,
+static ssize_t show_boost(struct cpufreq_intergalactic_tunables *tunables,
 			  char *buf)
 {
 	return sprintf(buf, "%d\n", tunables->boost_val);
 }
 
-static ssize_t store_boost(struct cpufreq_interactive_tunables *tunables,
+static ssize_t store_boost(struct cpufreq_intergalactic_tunables *tunables,
 			   const char *buf, size_t count)
 {
 	int ret;
@@ -1855,7 +1855,7 @@ static ssize_t store_boost(struct cpufreq_interactive_tunables *tunables,
 
 	if (tunables->boost_val) {
 		trace_cpufreq_intergalactic_boost("on");
-		cpufreq_interactive_boost(policy);
+		cpufreq_intergalactic_boost(policy);
 	} else {
 		tunables->boostpulse_endtime = ktime_to_us(ktime_get());
 		trace_cpufreq_intergalactic_unboost("off");
@@ -1864,13 +1864,13 @@ static ssize_t store_boost(struct cpufreq_interactive_tunables *tunables,
 	return count;
 }
 
-static ssize_t show_boostpulse(struct cpufreq_interactive_tunables *tunables,
+static ssize_t show_boostpulse(struct cpufreq_intergalactic_tunables *tunables,
 			  char *buf)
 {
 	return sprintf(buf, "%d\n", ktime_to_us(ktime_get()) < tunables->boostpulse_endtime);
 }
 
-static ssize_t store_boostpulse(struct cpufreq_interactive_tunables *tunables,
+static ssize_t store_boostpulse(struct cpufreq_intergalactic_tunables *tunables,
 				const char *buf, size_t count)
 {
 	int ret;
@@ -1886,7 +1886,7 @@ static ssize_t store_boostpulse(struct cpufreq_interactive_tunables *tunables,
 		tunables->boostpulse_endtime = ktime_to_us(ktime_get()) +
 			tunables->boostpulse_duration_val;
 		trace_cpufreq_intergalactic_boost("pulse");
-		cpufreq_interactive_boost(policy);
+		cpufreq_intergalactic_boost(policy);
 	} else {
 		tunables->boostpulse_endtime = ktime_to_us(ktime_get());
 		trace_cpufreq_intergalactic_unboost("off");
@@ -1895,13 +1895,13 @@ static ssize_t store_boostpulse(struct cpufreq_interactive_tunables *tunables,
 	return count;
 }
 
-static ssize_t show_boostpulse_duration(struct cpufreq_interactive_tunables
+static ssize_t show_boostpulse_duration(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 	return sprintf(buf, "%d\n", tunables->boostpulse_duration_val);
 }
 
-static ssize_t store_boostpulse_duration(struct cpufreq_interactive_tunables
+static ssize_t store_boostpulse_duration(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -1915,13 +1915,13 @@ static ssize_t store_boostpulse_duration(struct cpufreq_interactive_tunables
 	return count;
 }
 
-static ssize_t show_io_is_busy(struct cpufreq_interactive_tunables *tunables,
+static ssize_t show_io_is_busy(struct cpufreq_intergalactic_tunables *tunables,
 		char *buf)
 {
 	return sprintf(buf, "%u\n", tunables->io_is_busy);
 }
 
-static ssize_t store_io_is_busy(struct cpufreq_interactive_tunables *tunables,
+static ssize_t store_io_is_busy(struct cpufreq_intergalactic_tunables *tunables,
 		const char *buf, size_t count)
 {
 	int ret;
@@ -1936,13 +1936,13 @@ static ssize_t store_io_is_busy(struct cpufreq_interactive_tunables *tunables,
 }
 
 #ifdef CONFIG_MODE_AUTO_CHANGE
-static ssize_t show_mode(struct cpufreq_interactive_tunables
+static ssize_t show_mode(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 	return sprintf(buf, "%u\n", tunables->mode);
 }
 
-static ssize_t store_mode(struct cpufreq_interactive_tunables
+static ssize_t store_mode(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -1957,13 +1957,13 @@ static ssize_t store_mode(struct cpufreq_interactive_tunables
 	return count;
 }
 
-static ssize_t show_enforced_mode(struct cpufreq_interactive_tunables
+static ssize_t show_enforced_mode(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 	return sprintf(buf, "%u\n", tunables->enforced_mode);
 }
 
-static ssize_t store_enforced_mode(struct cpufreq_interactive_tunables
+static ssize_t store_enforced_mode(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -1978,13 +1978,13 @@ static ssize_t store_enforced_mode(struct cpufreq_interactive_tunables
 	return count;
 }
 
-static ssize_t show_param_index(struct cpufreq_interactive_tunables
+static ssize_t show_param_index(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 	return sprintf(buf, "%u\n", tunables->param_index);
 }
 
-static ssize_t store_param_index(struct cpufreq_interactive_tunables
+static ssize_t store_param_index(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -2003,13 +2003,13 @@ static ssize_t store_param_index(struct cpufreq_interactive_tunables
 	return count;
 }
 
-static ssize_t show_multi_enter_load(struct cpufreq_interactive_tunables
+static ssize_t show_multi_enter_load(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 	return sprintf(buf, "%u\n", tunables->multi_enter_load);
 }
 
-static ssize_t store_multi_enter_load(struct cpufreq_interactive_tunables
+static ssize_t store_multi_enter_load(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -2023,13 +2023,13 @@ static ssize_t store_multi_enter_load(struct cpufreq_interactive_tunables
 	return count;
 }
 
-static ssize_t show_multi_exit_load(struct cpufreq_interactive_tunables
+static ssize_t show_multi_exit_load(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 	return sprintf(buf, "%u\n", tunables->multi_exit_load);
 }
 
-static ssize_t store_multi_exit_load(struct cpufreq_interactive_tunables
+static ssize_t store_multi_exit_load(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -2043,13 +2043,13 @@ static ssize_t store_multi_exit_load(struct cpufreq_interactive_tunables
 	return count;
 }
 
-static ssize_t show_single_enter_load(struct cpufreq_interactive_tunables
+static ssize_t show_single_enter_load(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 	return sprintf(buf, "%u\n", tunables->single_enter_load);
 }
 
-static ssize_t store_single_enter_load(struct cpufreq_interactive_tunables
+static ssize_t store_single_enter_load(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -2063,13 +2063,13 @@ static ssize_t store_single_enter_load(struct cpufreq_interactive_tunables
 	return count;
 }
 
-static ssize_t show_single_exit_load(struct cpufreq_interactive_tunables
+static ssize_t show_single_exit_load(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 	return sprintf(buf, "%u\n", tunables->single_exit_load);
 }
 
-static ssize_t store_single_exit_load(struct cpufreq_interactive_tunables
+static ssize_t store_single_exit_load(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -2083,13 +2083,13 @@ static ssize_t store_single_exit_load(struct cpufreq_interactive_tunables
 	return count;
 }
 
-static ssize_t show_multi_enter_time(struct cpufreq_interactive_tunables
+static ssize_t show_multi_enter_time(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 	return sprintf(buf, "%lu\n", tunables->multi_enter_time);
 }
 
-static ssize_t store_multi_enter_time(struct cpufreq_interactive_tunables
+static ssize_t store_multi_enter_time(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -2103,13 +2103,13 @@ static ssize_t store_multi_enter_time(struct cpufreq_interactive_tunables
 	return count;
 }
 
-static ssize_t show_multi_exit_time(struct cpufreq_interactive_tunables
+static ssize_t show_multi_exit_time(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 	return sprintf(buf, "%lu\n", tunables->multi_exit_time);
 }
 
-static ssize_t store_multi_exit_time(struct cpufreq_interactive_tunables
+static ssize_t store_multi_exit_time(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -2123,13 +2123,13 @@ static ssize_t store_multi_exit_time(struct cpufreq_interactive_tunables
 	return count;
 }
 
-static ssize_t show_single_enter_time(struct cpufreq_interactive_tunables
+static ssize_t show_single_enter_time(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 	return sprintf(buf, "%lu\n", tunables->single_enter_time);
 }
 
-static ssize_t store_single_enter_time(struct cpufreq_interactive_tunables
+static ssize_t store_single_enter_time(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -2143,13 +2143,13 @@ static ssize_t store_single_enter_time(struct cpufreq_interactive_tunables
 	return count;
 }
 
-static ssize_t show_single_exit_time(struct cpufreq_interactive_tunables
+static ssize_t show_single_exit_time(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 	return sprintf(buf, "%lu\n", tunables->single_exit_time);
 }
 
-static ssize_t store_single_exit_time(struct cpufreq_interactive_tunables
+static ssize_t store_single_exit_time(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -2163,12 +2163,12 @@ static ssize_t store_single_exit_time(struct cpufreq_interactive_tunables
 	return count;
 }
 
-static ssize_t show_cpu_util(struct cpufreq_interactive_tunables
+static ssize_t show_cpu_util(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 	int i;
 	u64 now;
-	struct cpufreq_interactive_cpuinfo *pcpu;
+	struct cpufreq_intergalactic_cpuinfo *pcpu;
 	struct cpufreq_policy *policy = container_of(tunables->policy,
 		struct cpufreq_policy, policy);
 	ssize_t ret = 0;
@@ -2190,13 +2190,13 @@ static ssize_t show_cpu_util(struct cpufreq_interactive_tunables
 	return ret;
 }
 
-static ssize_t show_single_cluster0_min_freq(struct cpufreq_interactive_tunables
+static ssize_t show_single_cluster0_min_freq(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 	return sprintf(buf, "%u\n", tunables->single_cluster0_min_freq);
 }
 
-static ssize_t store_single_cluster0_min_freq(struct cpufreq_interactive_tunables
+static ssize_t store_single_cluster0_min_freq(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -2210,13 +2210,13 @@ static ssize_t store_single_cluster0_min_freq(struct cpufreq_interactive_tunable
 	return count;
 }
 
-static ssize_t show_multi_cluster0_min_freq(struct cpufreq_interactive_tunables
+static ssize_t show_multi_cluster0_min_freq(struct cpufreq_intergalactic_tunables
 		*tunables, char *buf)
 {
 	return sprintf(buf, "%u\n", tunables->multi_cluster0_min_freq);
 }
 
-static ssize_t store_multi_cluster0_min_freq(struct cpufreq_interactive_tunables
+static ssize_t store_multi_cluster0_min_freq(struct cpufreq_intergalactic_tunables
 		*tunables, const char *buf, size_t count)
 {
 	int ret;
@@ -2231,7 +2231,7 @@ static ssize_t store_multi_cluster0_min_freq(struct cpufreq_interactive_tunables
 }
 #endif
 #ifdef CONFIG_PMU_COREMEM_RATIO
-static ssize_t show_region_time_in_state(struct cpufreq_interactive_tunables *tunables,
+static ssize_t show_region_time_in_state(struct cpufreq_intergalactic_tunables *tunables,
 			  char *buf)
 {
 	int i;
@@ -2382,7 +2382,7 @@ static struct freq_attr region_time_in_state_gov_pol =
 #endif
 
 /* One Governor instance for entire system */
-static struct attribute *interactive_attributes_gov_sys[] = {
+static struct attribute *intergalactic_attributes_gov_sys[] = {
 	&target_loads_gov_sys.attr,
 	&hotplugging_gov_sys.attr,
 	&hotplug_min_in_cores_gov_sys.attr,
@@ -2423,13 +2423,13 @@ static struct attribute *interactive_attributes_gov_sys[] = {
 	NULL,
 };
 
-static struct attribute_group interactive_attr_group_gov_sys = {
-	.attrs = interactive_attributes_gov_sys,
-	.name = "interactive",
+static struct attribute_group intergalactic_attr_group_gov_sys = {
+	.attrs = intergalactic_attributes_gov_sys,
+	.name = "intergalactic",
 };
 
 /* Per policy governor instance */
-static struct attribute *interactive_attributes_gov_pol[] = {
+static struct attribute *intergalactic_attributes_gov_pol[] = {
 	&target_loads_gov_pol.attr,
 	&hotplugging_gov_pol.attr,
 	&hotplug_min_in_cores_gov_pol.attr,
@@ -2470,17 +2470,17 @@ static struct attribute *interactive_attributes_gov_pol[] = {
 	NULL,
 };
 
-static struct attribute_group interactive_attr_group_gov_pol = {
-	.attrs = interactive_attributes_gov_pol,
-	.name = "interactive",
+static struct attribute_group intergalactic_attr_group_gov_pol = {
+	.attrs = intergalactic_attributes_gov_pol,
+	.name = "intergalactic",
 };
 
 static struct attribute_group *get_sysfs_attr(void)
 {
 	if (have_governor_per_policy())
-		return &interactive_attr_group_gov_pol;
+		return &intergalactic_attr_group_gov_pol;
 	else
-		return &interactive_attr_group_gov_sys;
+		return &intergalactic_attr_group_gov_sys;
 }
 
 #ifdef CONFIG_PMU_COREMEM_RATIO
@@ -2503,7 +2503,7 @@ void pmu_resume_cpu(int cpu)
 }
 #endif
 
-static int cpufreq_interactive_idle_notifier(struct notifier_block *nb,
+static int cpufreq_intergalactic_idle_notifier(struct notifier_block *nb,
 					     unsigned long val,
 					     void *data)
 {
@@ -2513,13 +2513,13 @@ static int cpufreq_interactive_idle_notifier(struct notifier_block *nb,
 
 	switch (val) {
 	case IDLE_START:
-		cpufreq_interactive_idle_start();
+		cpufreq_intergalactic_idle_start();
 #ifdef CONFIG_PMU_COREMEM_RATIO
 		pmu_suspend_cpu(cpu);
 #endif
 		break;
 	case IDLE_END:
-		cpufreq_interactive_idle_end();
+		cpufreq_intergalactic_idle_end();
 #ifdef CONFIG_PMU_COREMEM_RATIO
 		pmu_resume_cpu(cpu);
 #endif
@@ -2529,8 +2529,8 @@ static int cpufreq_interactive_idle_notifier(struct notifier_block *nb,
 	return 0;
 }
 
-static struct notifier_block cpufreq_interactive_idle_nb = {
-	.notifier_call = cpufreq_interactive_idle_notifier,
+static struct notifier_block cpufreq_intergalactic_idle_nb = {
+	.notifier_call = cpufreq_intergalactic_idle_notifier,
 };
 
 #ifdef CONFIG_PMU_COREMEM_RATIO
@@ -2557,7 +2557,7 @@ static struct notifier_block __cpuinitdata exynos_pmu_cpu_notifier_block = {
 #endif
 
 #ifdef CONFIG_MODE_AUTO_CHANGE
-static void cpufreq_param_set_init(struct cpufreq_interactive_tunables *tunables)
+static void cpufreq_param_set_init(struct cpufreq_intergalactic_tunables *tunables)
 {
 	unsigned int i;
 
@@ -2582,9 +2582,9 @@ static int cpufreq_governor_intergalactic(struct cpufreq_policy *policy,
 {
 	int rc;
 	unsigned int j;
-	struct cpufreq_interactive_cpuinfo *pcpu;
+	struct cpufreq_intergalactic_cpuinfo *pcpu;
 	struct cpufreq_frequency_table *freq_table;
-	struct cpufreq_interactive_tunables *tunables;
+	struct cpufreq_intergalactic_tunables *tunables;
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
 	char speedchange_task_name[TASK_NAME_LEN];
 	unsigned long flags;
@@ -2681,7 +2681,7 @@ static int cpufreq_governor_intergalactic(struct cpufreq_policy *policy,
 		}
 
 		if (!policy->governor->initialized) {
-			idle_notifier_register(&cpufreq_interactive_idle_nb);
+			idle_notifier_register(&cpufreq_intergalactic_idle_nb);
 #ifdef CONFIG_PMU_COREMEM_RATIO
 			register_cpu_notifier(&exynos_pmu_cpu_notifier_block);
 #endif
@@ -2699,7 +2699,7 @@ static int cpufreq_governor_intergalactic(struct cpufreq_policy *policy,
 #ifdef CONFIG_PMU_COREMEM_RATIO
 				unregister_cpu_notifier(&exynos_pmu_cpu_notifier_block);
 #endif
-				idle_notifier_unregister(&cpufreq_interactive_idle_nb);
+				idle_notifier_unregister(&cpufreq_intergalactic_idle_nb);
 			}
 
 			sysfs_remove_group(get_governor_parent_kobj(policy),
@@ -2745,16 +2745,16 @@ static int cpufreq_governor_intergalactic(struct cpufreq_policy *policy,
 			down_write(&pcpu->enable_sem);
 			del_timer_sync(&pcpu->cpu_timer);
 			del_timer_sync(&pcpu->cpu_slack_timer);
-			cpufreq_interactive_timer_start(tunables, j);
+			cpufreq_intergalactic_timer_start(tunables, j);
 			pcpu->governor_enabled = 1;
 			up_write(&pcpu->enable_sem);
 		}
 
-		snprintf(speedchange_task_name, TASK_NAME_LEN, "cfinteractive%d\n",
+		snprintf(speedchange_task_name, TASK_NAME_LEN, "cfintergalactic%d\n",
 					policy->cpu);
 
 		tunables->speedchange_task =
-			kthread_create(cpufreq_interactive_speedchange_task, NULL,
+			kthread_create(cpufreq_intergalactic_speedchange_task, NULL,
 				       speedchange_task_name);
 		if (IS_ERR(tunables->speedchange_task)) {
 			mutex_unlock(&gov_lock);
@@ -2769,7 +2769,7 @@ static int cpufreq_governor_intergalactic(struct cpufreq_policy *policy,
 					policy->cpu);
 
 		tunables->regionchange_task =
-			kthread_create(cpufreq_interactive_regionchange_task, NULL,
+			kthread_create(cpufreq_intergalactic_regionchange_task, NULL,
 					regionchange_task_name);
 		if (IS_ERR(tunables->regionchange_task)) {
 			kthread_stop(tunables->regionchange_task);
@@ -2857,7 +2857,7 @@ static int cpufreq_governor_intergalactic(struct cpufreq_policy *policy,
 				down_write(&pcpu->enable_sem);
 				del_timer_sync(&pcpu->cpu_timer);
 				del_timer_sync(&pcpu->cpu_slack_timer);
-				cpufreq_interactive_timer_start(tunables, j);
+				cpufreq_intergalactic_timer_start(tunables, j);
 				up_write(&pcpu->enable_sem);
 			}
 
@@ -2878,16 +2878,16 @@ struct cpufreq_governor cpufreq_gov_intergalactic = {
 	.owner = THIS_MODULE,
 };
 
-static void cpufreq_interactive_nop_timer(unsigned long data)
+static void cpufreq_intergalactic_nop_timer(unsigned long data)
 {
 }
 
-#ifndef CONFIG_CPU_FREQ_GOV_INTERACTIVE
-unsigned int cpufreq_interactive_get_hispeed_freq(int cpu)
+#ifndef CONFIG_CPU_FREQ_GOV_intergalactic
+unsigned int cpufreq_intergalactic_get_hispeed_freq(int cpu)
 {
-	struct cpufreq_interactive_cpuinfo *pcpu =
+	struct cpufreq_intergalactic_cpuinfo *pcpu =
 			&per_cpu(cpuinfo, cpu);
-	struct cpufreq_interactive_tunables *tunables;
+	struct cpufreq_intergalactic_tunables *tunables;
 
 	if (pcpu && pcpu->policy)
 		tunables = pcpu->policy->governor_data;
@@ -2902,11 +2902,11 @@ unsigned int cpufreq_interactive_get_hispeed_freq(int cpu)
 #endif
 
 #ifdef CONFIG_ARCH_EXYNOS
-static int cpufreq_interactive_cluster1_min_qos_handler(struct notifier_block *b,
+static int cpufreq_intergalactic_cluster1_min_qos_handler(struct notifier_block *b,
 						unsigned long val, void *v)
 {
-	struct cpufreq_interactive_cpuinfo *pcpu;
-	struct cpufreq_interactive_tunables *tunables;
+	struct cpufreq_intergalactic_cpuinfo *pcpu;
+	struct cpufreq_intergalactic_tunables *tunables;
 	unsigned long flags;
 	int ret = NOTIFY_OK;
 #if defined(CONFIG_ARM_EXYNOS_MP_CPUFREQ)
@@ -2949,15 +2949,15 @@ exit:
 	return ret;
 }
 
-static struct notifier_block cpufreq_interactive_cluster1_min_qos_notifier = {
-	.notifier_call = cpufreq_interactive_cluster1_min_qos_handler,
+static struct notifier_block cpufreq_intergalactic_cluster1_min_qos_notifier = {
+	.notifier_call = cpufreq_intergalactic_cluster1_min_qos_handler,
 };
 
-static int cpufreq_interactive_cluster1_max_qos_handler(struct notifier_block *b,
+static int cpufreq_intergalactic_cluster1_max_qos_handler(struct notifier_block *b,
 						unsigned long val, void *v)
 {
-	struct cpufreq_interactive_cpuinfo *pcpu;
-	struct cpufreq_interactive_tunables *tunables;
+	struct cpufreq_intergalactic_cpuinfo *pcpu;
+	struct cpufreq_intergalactic_tunables *tunables;
 	unsigned long flags;
 	int ret = NOTIFY_OK;
 #if defined(CONFIG_ARM_EXYNOS_MP_CPUFREQ)
@@ -3000,16 +3000,16 @@ exit:
 	return ret;
 }
 
-static struct notifier_block cpufreq_interactive_cluster1_max_qos_notifier = {
-	.notifier_call = cpufreq_interactive_cluster1_max_qos_handler,
+static struct notifier_block cpufreq_intergalactic_cluster1_max_qos_notifier = {
+	.notifier_call = cpufreq_intergalactic_cluster1_max_qos_handler,
 };
 
 #ifdef CONFIG_ARM_EXYNOS_MP_CPUFREQ
-static int cpufreq_interactive_cluster0_min_qos_handler(struct notifier_block *b,
+static int cpufreq_intergalactic_cluster0_min_qos_handler(struct notifier_block *b,
 						unsigned long val, void *v)
 {
-	struct cpufreq_interactive_cpuinfo *pcpu;
-	struct cpufreq_interactive_tunables *tunables;
+	struct cpufreq_intergalactic_cpuinfo *pcpu;
+	struct cpufreq_intergalactic_tunables *tunables;
 	unsigned long flags;
 	int ret = NOTIFY_OK;
 
@@ -3047,15 +3047,15 @@ exit:
 	return ret;
 }
 
-static struct notifier_block cpufreq_interactive_cluster0_min_qos_notifier = {
-	.notifier_call = cpufreq_interactive_cluster0_min_qos_handler,
+static struct notifier_block cpufreq_intergalactic_cluster0_min_qos_notifier = {
+	.notifier_call = cpufreq_intergalactic_cluster0_min_qos_handler,
 };
 
-static int cpufreq_interactive_cluster0_max_qos_handler(struct notifier_block *b,
+static int cpufreq_intergalactic_cluster0_max_qos_handler(struct notifier_block *b,
 						unsigned long val, void *v)
 {
-	struct cpufreq_interactive_cpuinfo *pcpu;
-	struct cpufreq_interactive_tunables *tunables;
+	struct cpufreq_intergalactic_cpuinfo *pcpu;
+	struct cpufreq_intergalactic_tunables *tunables;
 	unsigned long flags;
 	int ret = NOTIFY_OK;
 
@@ -3093,25 +3093,25 @@ exit:
 	return ret;
 }
 
-static struct notifier_block cpufreq_interactive_cluster0_max_qos_notifier = {
-	.notifier_call = cpufreq_interactive_cluster0_max_qos_handler,
+static struct notifier_block cpufreq_intergalactic_cluster0_max_qos_notifier = {
+	.notifier_call = cpufreq_intergalactic_cluster0_max_qos_handler,
 };
 #endif
 #endif
 
-static int __init cpufreq_interactive_init(void)
+static int __init cpufreq_intergalactic_init(void)
 {
 	unsigned int i;
-	struct cpufreq_interactive_cpuinfo *pcpu;
+	struct cpufreq_intergalactic_cpuinfo *pcpu;
 
 	/* Initalize per-cpu timers */
 	for_each_possible_cpu(i) {
 		pcpu = &per_cpu(cpuinfo, i);
 		init_timer_deferrable(&pcpu->cpu_timer);
-		pcpu->cpu_timer.function = cpufreq_interactive_timer;
+		pcpu->cpu_timer.function = cpufreq_intergalactic_timer;
 		pcpu->cpu_timer.data = i;
 		init_timer(&pcpu->cpu_slack_timer);
-		pcpu->cpu_slack_timer.function = cpufreq_interactive_nop_timer;
+		pcpu->cpu_slack_timer.function = cpufreq_intergalactic_nop_timer;
 		spin_lock_init(&pcpu->load_lock);
 		spin_lock_init(&pcpu->target_freq_lock);
 		init_rwsem(&pcpu->enable_sem);
@@ -3130,11 +3130,11 @@ static int __init cpufreq_interactive_init(void)
 	mutex_init(&gov_lock);
 
 #ifdef CONFIG_ARCH_EXYNOS
-	pm_qos_add_notifier(PM_QOS_CLUSTER1_FREQ_MIN, &cpufreq_interactive_cluster1_min_qos_notifier);
-	pm_qos_add_notifier(PM_QOS_CLUSTER1_FREQ_MAX, &cpufreq_interactive_cluster1_max_qos_notifier);
+	pm_qos_add_notifier(PM_QOS_CLUSTER1_FREQ_MIN, &cpufreq_intergalactic_cluster1_min_qos_notifier);
+	pm_qos_add_notifier(PM_QOS_CLUSTER1_FREQ_MAX, &cpufreq_intergalactic_cluster1_max_qos_notifier);
 #ifdef CONFIG_ARM_EXYNOS_MP_CPUFREQ
-	pm_qos_add_notifier(PM_QOS_CLUSTER0_FREQ_MIN, &cpufreq_interactive_cluster0_min_qos_notifier);
-	pm_qos_add_notifier(PM_QOS_CLUSTER0_FREQ_MAX, &cpufreq_interactive_cluster0_max_qos_notifier);
+	pm_qos_add_notifier(PM_QOS_CLUSTER0_FREQ_MIN, &cpufreq_intergalactic_cluster0_min_qos_notifier);
+	pm_qos_add_notifier(PM_QOS_CLUSTER0_FREQ_MAX, &cpufreq_intergalactic_cluster0_max_qos_notifier);
 #endif
 #endif
 
@@ -3155,20 +3155,20 @@ static void mode_auto_change_minlock(struct work_struct *work)
 #endif
 
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_INTERGALACTIC
-fs_initcall(cpufreq_interactive_init);
+fs_initcall(cpufreq_intergalactic_init);
 #else
-module_init(cpufreq_interactive_init);
+module_init(cpufreq_intergalactic_init);
 #endif
 
-static void __exit cpufreq_interactive_exit(void)
+static void __exit cpufreq_intergalactic_exit(void)
 {
 	cpufreq_unregister_governor(&cpufreq_gov_intergalactic);
 }
 
-module_exit(cpufreq_interactive_exit);
+module_exit(cpufreq_intergalactic_exit);
 
 MODULE_AUTHOR("Lukas Berger <mail@lukasberger.at>");
 MODULE_DESCRIPTION("'cpufreq_intergalactic' - A cpufreq governor for"
 	"Latency sensitive workloads for ARM big.LITTLE architecture featuring CPU-hotplugging."
-	"Identifies as interactive for compatiblity-reasons");
+	"Identifies as intergalactic for compatiblity-reasons");
 MODULE_LICENSE("GPL");
