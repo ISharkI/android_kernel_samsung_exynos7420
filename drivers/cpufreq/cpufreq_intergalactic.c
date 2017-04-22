@@ -743,6 +743,7 @@ static void cpufreq_intergalactic_timer(unsigned long data)
 	unsigned int delta_time;
 	u64 cputime_speedadj;
 	int cpu_load;
+	unsigned int cpu_util;
 	struct cpufreq_intergalactic_cpuinfo *pcpu =
 		&per_cpu(cpuinfo, data);
 	struct cpufreq_intergalactic_tunables *tunables =
@@ -898,8 +899,10 @@ static void cpufreq_intergalactic_timer(unsigned long data)
 			if (ktime_now < hotplugging_cpu_next_switch[cpu]) {
 				continue; // no state-change allowed yet
 			}
+			
+			cpu_util = per_cpu(cpu_util, cpu);
 
-			if (cpu_load >= tunables->hotplug_in_load) {
+			if (cpu_util >= tunables->hotplug_in_load) {
 				// ignore already online cores
 				if (cpu_online(cpu))
 					continue;
@@ -912,7 +915,7 @@ static void cpufreq_intergalactic_timer(unsigned long data)
 				hotplugging_cpu_states[cpu] = 1;
 				hotplugging_cpu_next_switch[cpu] = ktime_now + tunables->hotplug_min_plug_time;
 
-			} else if (cpu_load <= tunables->hotplug_out_load) {
+			} else if (cpu_util <= tunables->hotplug_out_load) {
 				// ignore already offline cores
 				if (!cpu_online(cpu))
 					continue;
