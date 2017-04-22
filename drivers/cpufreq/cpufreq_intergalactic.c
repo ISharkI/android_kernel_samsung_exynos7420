@@ -88,7 +88,6 @@ static spinlock_t regionchange_cpumask_lock;
 // global variables for cpu-hotplugging
 static struct workqueue_struct *cpugov_hotplugging_worker_wq;
 static struct work_struct cpugov_hotplugging_worker_work;
-static spinlock_t cpu_hotplugging_lock; 
 static unsigned int hotplugging_cpu_states[8] = { 
 	1, 1, 1, 1, // apollo
 	1, 1, 1, 1  // atlas
@@ -721,8 +720,6 @@ static void disable_hotplugging(struct cpufreq_intergalactic_tunables *tunables)
 static void __cpuinit cpugov_hotplugging_worker(struct work_struct *work)
 {
 	int i;
-
-	spin_lock(&cpu_hotplugging_lock);
 	
 	for (i = 0; i < 8; i++) {	
 		// do not control the first cores of each cluster
@@ -737,8 +734,6 @@ static void __cpuinit cpugov_hotplugging_worker(struct work_struct *work)
 			pr_info("%s: offlined cpu %d", __func__, i);
 		}
 	}
-
-	spin_unlock(&cpu_hotplugging_lock);
 }
 
 static void cpufreq_intergalactic_timer(unsigned long data)
@@ -866,8 +861,6 @@ static void cpufreq_intergalactic_timer(unsigned long data)
 
 	// transfer current settings and queue the hotplugging-worker
 	if (tunables->hotplugging) {
-
-		spin_lock(&cpu_hotplugging_lock);
 	
 		// Disable dynamic hotplugging if our hotplugging is enabled
 		if (!exynos_dm_hotplug_disabled()) {
@@ -936,8 +929,6 @@ static void cpufreq_intergalactic_timer(unsigned long data)
 			// exit
 			break;
 		}
-
-		spin_unlock(&cpu_hotplugging_lock);
 
 		// queue the worker
 		queue_work(cpugov_hotplugging_worker_wq, &cpugov_hotplugging_worker_work);
@@ -2656,8 +2647,6 @@ static int cpufreq_governor_intergalactic(struct cpufreq_policy *policy,
 
 		/* update handle for get cpufreq_policy */
 		tunables->policy = &policy->policy;
-
-		spin_lock_init(&cpu_hotplugging_lock);
 
 		spin_lock_init(&tunables->target_loads_lock);
 		spin_lock_init(&tunables->above_hispeed_delay_lock);
