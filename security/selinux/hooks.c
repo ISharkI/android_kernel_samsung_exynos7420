@@ -184,9 +184,11 @@ static int __init enforcing_setup(char *str)
 {
 	unsigned long enforcing;
 	if (!strict_strtoul(str, 0, &enforcing))
-#if defined(SELINUX_ALWAYS_ENFORCE)
+#if defined(SELINUX_ALWAYS_ENFORCE) || \
+	defined(SELINUX_DEFAULT_ENFORCE)
 		selinux_enforcing = 1;
-#elif defined(SELINUX_ALWAYS_PERMISSIVE)
+#elif defined(SELINUX_ALWAYS_PERMISSIVE) || \
+	  defined(SELINUX_DEFAULT_PERMISSIVE)
 		selinux_enforcing = 0;
 #else
 		selinux_enforcing = enforcing ? 1 : 0;
@@ -203,10 +205,11 @@ static int __init selinux_enabled_setup(char *str)
 {
 	unsigned long enabled;
 	if (!strict_strtoul(str, 0, &enabled))
-#if defined(SELINUX_ALWAYS_ENFORCE)
-		selinux_enforcing = 1;
-#elif defined(SELINUX_ALWAYS_PERMISSIVE)
-		selinux_enforcing = 0;
+#if defined(SELINUX_ALWAYS_ENFORCE) || \
+	defined(SELINUX_DEFAULT_ENFORCE) || \
+    defined(SELINUX_ALWAYS_PERMISSIVE) || \
+	defined(SELINUX_DEFAULT_PERMISSIVE)
+		selinux_enabled = 1;
 #else
 		selinux_enabled = enabled ? 1 : 0;
 #endif
